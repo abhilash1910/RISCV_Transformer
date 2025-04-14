@@ -186,7 +186,7 @@ void matvec_mul_S7_8(int16_t *mat, // [rows * cols] in S7_8
 */
 // Optimizes variations include:
 // loop unroll & better pipelining for fetch + decode
-//29945 cycles
+//29945
 
 void matvec_mul_S7_8(int16_t *mat, 
                    volatile int16_t *vec, 
@@ -282,7 +282,7 @@ void matvec_mul_S7_8(int16_t *mat,
 //    - Actually: ReLU the scores, then normalize them so sum=Q_SCALE
 //    - This is NOT a real exponent-based softmax, just a quick hack
 // ---------------------------------------------------------
-//29360 cycles
+//29360
 /*
 void fake_softmax_S7_8(int16_t *values, int length) {
     // 3a) ReLU
@@ -651,7 +651,7 @@ void single_head_attention_S7_8(int16_t Q[SEQ_LEN][MODEL_DIM],
         }
     }
 }*/
-//29157 cycles
+//29157
 void single_head_attention_S7_8(int16_t Q[SEQ_LEN][MODEL_DIM],
                               int16_t K[SEQ_LEN][MODEL_DIM],
                               int16_t V[SEQ_LEN][MODEL_DIM],
@@ -754,7 +754,63 @@ void multi_head_attention_S7_8(int16_t Q[SEQ_LEN][MODEL_DIM],
     }
 }
 */
-
+/*
+void flash_attention_S7_8(int16_t Q[SEQ_LEN][MODEL_DIM],
+                         int16_t K[SEQ_LEN][MODEL_DIM],
+                         int16_t V[SEQ_LEN][MODEL_DIM],
+                         int16_t out_attn[SEQ_LEN][MODEL_DIM])
+{
+    // Block size for tiling
+    const int BLOCK_SIZE = 32;
+    
+    // Initialize output to zero
+    for(int i = 0; i < SEQ_LEN; i++) {
+        for(int d = 0; d < MODEL_DIM; d++) {
+            out_attn[i][d] = 0;
+        }
+    }
+    
+    // Process in blocks
+    for(int i_block = 0; i_block < SEQ_LEN; i_block += BLOCK_SIZE) {
+        int i_end = (i_block + BLOCK_SIZE > SEQ_LEN) ? SEQ_LEN : i_block + BLOCK_SIZE;
+        
+        for(int j_block = 0; j_block < SEQ_LEN; j_block += BLOCK_SIZE) {
+            int j_end = (j_block + BLOCK_SIZE > SEQ_LEN) ? SEQ_LEN : j_block + BLOCK_SIZE;
+            
+            // Compute attention scores for this block
+            int16_t block_scores[BLOCK_SIZE][BLOCK_SIZE];
+            for(int i = i_block; i < i_end; i++) {
+                for(int j = j_block; j < j_end; j++) {
+                    block_scores[i - i_block][j - j_block] = dot_S7_8(Q[i], K[j], MODEL_DIM);
+                }
+            }
+            
+            // Scale scores
+            for(int i = 0; i < i_end - i_block; i++) {
+                for(int j = 0; j < j_end - j_block; j++) {
+                    block_scores[i][j] >>= 1; // Scale by sqrt(MODEL_DIM)
+                }
+            }
+            
+            // Apply softmax to block scores
+            for(int i = 0; i < i_end - i_block; i++) {
+                fake_softmax_S7_8(block_scores[i], j_end - j_block);
+            }
+            
+            // Compute weighted sum of values for this block
+            for(int i = i_block; i < i_end; i++) {
+                for(int d = 0; d < MODEL_DIM; d++) {
+                    int32_t acc = 0;
+                    for(int j = j_block; j < j_end; j++) {
+                        acc += (block_scores[i - i_block][j - j_block] * V[j][d]) >> Q_SHIFT;
+                    }
+                    out_attn[i][d] = saturate_i16(out_attn[i][d] + acc);
+                }
+            }
+        }
+    }
+}
+*/
 void multi_head_attention_S7_8(int16_t Q[SEQ_LEN][MODEL_DIM],
                              int16_t K[SEQ_LEN][MODEL_DIM],
                              int16_t V[SEQ_LEN][MODEL_DIM],

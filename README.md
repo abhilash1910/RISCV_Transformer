@@ -1,6 +1,27 @@
-## RISCV: 
+## RISCV:  Accelerating LLM Inference with SIMD Flash MHA, Tiling and Compiler optimizations on RISCV
 
+Codasip is a HW/SW codesign platform following C and inline RISC-V assembly for simulating complex algorithms such as transformers
+We use this platform to ensure IA(Instruction Accurate) and CA(Cycle Accurate) representation of our code base.
+Existing codebase is split into codasip_urisc_v (HW) and hackathon_sw(SW) sections for IA (Instruction Accurate) and (CA)Cycle Accurate code.
 
+The existing codebase modification was split into these 2 sections:
+- src/main.c (SW): Extend with feature implementation - MHA, Layernorm, Blockscale Attention (Flash) and Tiling along with coded Loop optimizations
+
+- isa_hackaton.codal: Extend the 5 CPU RISCV instructions with custom softmax , matrix dot product, attention scaling, and default residual addition connections
+
+A memory model of codasip RISCV platform is presented here:
+
+<img src="imgs/hack8.png">
+
+## Optimizations Used:
+
+- Tiling and SIMD 4-16 lane loop unrolling:
+
+- MHA
+
+- Flash Attention
+
+- HW custom ISA
 
 
 ## Presentation Slides:
