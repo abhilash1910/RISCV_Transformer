@@ -1,0 +1,78 @@
+#include "config.hcodal"
+#include "opcodes.hcodal"
+#include "opcodes_hackaton.hcodal"
+#include "isa.hcodal"
+
+// part of the main ISA
+
+DEF_OPC_GROUP(opc_hackaton_custom_i, hackaton_custom_a, "hackaton_custom_instr_a", OPC_HACKATON_CUSTOM_A)
+DEF_OPC_GROUP(opc_hackaton_custom_i, hackaton_custom_b, "hackaton_custom_instr_b", OPC_HACKATON_CUSTOM_B)
+DEF_OPC_GROUP(opc_hackaton_custom_i, hackaton_custom_c, "hackaton_custom_instr_c", OPC_HACKATON_CUSTOM_C)
+DEF_OPC_GROUP(opc_hackaton_custom_i, hackaton_custom_d, "hackaton_custom_instr_d", OPC_HACKATON_CUSTOM_D)
+DEF_OPC_GROUP(opc_hackaton_custom_i, hackaton_custom_e, "hackaton_custom_instr_e", OPC_HACKATON_CUSTOM_E)
+
+set isa += i_ext_hackaton;
+
+element i_ext_hackaton
+{
+    use opc_hackaton_custom_i as opc;
+    use reg_any as rs_1, rs_2, dst;
+
+    assembly { opc dst "," rs_1 "," rs_2 };
+    binary { 0:bit[7] rs_2 rs_1 opc dst OPC_HACKATON };
+
+    semantics
+    {
+        int32 result,s1,s2,s3;
+
+        int32 simd_a0,simd_a1,simd_b0,simd_b1,accumulator;
+        int64 summa;
+
+        s1 = rf_gpr_read(rs_1);
+        s2 = rf_gpr_read(rs_2);
+        s3 = rf_gpr_read(dst);
+
+        switch (opc)
+        {
+            case OPC_HACKATON_CUSTOM_A:
+                //result = ADD_OPERATION;   
+                //softmax // value //sum //scale
+                result = ((int32_t)s1 * s3) / s2;
+                result = (result < -32768) ? -32768 : (result > 32767) ? 32767 : result;             
+                break;
+            case OPC_HACKATON_CUSTOM_B:
+                //result = ADD_OPERATION;
+                //residual connections add
+                result = s1 + s2;
+                result = (result < -32768) ? -32768 : (result > 32767) ? 32767 : result;
+                break;
+            case OPC_HACKATON_CUSTOM_C:
+                //result = ADD_OPERATION;
+                //scaling
+                result = s1 >> s2;
+                break;
+            case OPC_HACKATON_CUSTOM_D:
+                //result = ADD_OPERATION;
+                // mma
+                result = 0;
+                for(int i = 0; i < s3; i++) {
+                    int32_t prod = ((int32_t)s1[i] * (int32_t)s2[i]) >> Q_SHIFT;
+                    result += prod;
+                }
+                result = (result < -32768) ? -32768 : (result > 32767) ? 32767 : result;
+                break;
+            case OPC_HACKATON_CUSTOM_E:
+                //result = ADD_OPERATION;
+                //relu
+                result = (s1 < 0) ? 0 : (s1 > 32767) ? 32767 : s1;
+                break;
+            default:
+                result = (s1 + s2)/s3;
+                break;
+        }
+
+        rf_gpr_write(dst, result);
+
+
+    };
+};
