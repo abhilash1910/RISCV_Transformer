@@ -17,11 +17,18 @@ A memory model of codasip RISCV platform is presented here:
 
 - Tiling and SIMD 4-16 lane loop unrolling:
 
+  <img src="imgs/hack6.png">
+
 - MHA
+
+ <img src="imgs/hack_5.png">
 
 - Flash Attention
 
+ <img src="imgs/hack_4.png">
+
 - HW custom ISA
+
 
 
 ## Presentation Slides:
